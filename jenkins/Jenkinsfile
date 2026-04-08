@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'ap-south-1'
+        TF_VAR_key_name = 'extra'   // CHANGE THIS
+        SSH_KEY = '/home/ubuntu/extra.pem' // CHANGE THIS
+    }
+
+    stages {
+
+        stage('Clone Repo') {
+            steps {
+                git 'https://github.com/Nitindas0717/infra-automation.git'
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform init'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Get EC2 IP') {
+            steps {
+                script {
+                    def ip = sh(
+                        script: "cd terraform && terraform output -raw app_ip",
+                        returnStdout: true
+                    ).trim()
+
+                    env.APP_IP = ip
+                }
+            }
+        }
+
+        stage('Run Ansible') {
+            steps {
+                sh """
+                echo "[web]" > inventory
+                echo "$APP_IP ansible_user=ubuntu ansible_ssh_private_key_file=$SSH_KEY" >> inventory
+
+                ansible-playbook -i inventory ansible/playbook.yml
+                """
+            }
+        }
+    }
+}
