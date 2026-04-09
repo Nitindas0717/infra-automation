@@ -1,0 +1,39 @@
+- hosts: all
+  become: true
+
+  tasks:
+
+    - name: Install Java
+      apt:
+        name: openjdk-17-jdk
+        state: present
+
+    - name: Install dependencies
+      apt:
+        name:
+          - wget
+          - gnupg
+        state: present
+
+    - name: Add Jenkins key
+      shell: |
+        wget -q -O - https://pkg.jenkins.io/debian/jenkins.io.key | apt-key add -
+
+    - name: Add Jenkins repo
+      shell: |
+        echo "deb https://pkg.jenkins.io/debian binary/" > /etc/apt/sources.list.d/jenkins.list
+
+    - name: Update apt
+      apt:
+        update_cache: yes
+
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: present
+
+    - name: Start Jenkins
+      service:
+        name: jenkins
+        state: started
+        enabled: true

@@ -33,21 +33,32 @@ jobs:
       run: terraform apply -auto-approve -var="key_name=${{ secrets.KEY_NAME }}"
 
     - name: Get EC2 IP
-      id: tf_output
       working-directory: terraform
       run: |
         echo "APP_IP=$(terraform output -raw app_ip)" >> $GITHUB_ENV
+
+    - name: Print EC2 IP
+      run: echo "EC2 IP is $APP_IP"
 
     - name: Setup SSH Key
       run: |
         echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
         chmod 400 key.pem
 
+    - name: Wait for SSH
+      run: |
+        for i in {1..10}; do
+          nc -zv $APP_IP 22 && break
+          echo "Waiting for SSH..."
+          sleep 10
+        done
+
     - name: Install Ansible
       run: sudo apt-get install -y ansible
 
     - name: Run Ansible Playbook
       run: |
-       echo "[web]" > inventory
-       echo "$APP_IP ansible_user=ubuntu ansible_ssh_private_key_file=key.pem" >> inventory
-       ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory ansible/playbook.yml
+        echo "[web]" > inventory
+        echo "$APP_IP ansible_user=ubuntu ansible_ssh_private_key_file=key.pem" >> inventory
+
+        ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory ansible/site.yml
