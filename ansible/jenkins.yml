@@ -63,5 +63,6 @@
       register: jenkins_status
       ignore_errors: yes
 
-    - debug:
-      var: jenkins_status.stdout_lines
+    - name: Show Jenkins status output
+      debug:
+        var: jenkins_status.stdout_lines
