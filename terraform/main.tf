@@ -2,6 +2,15 @@ provider "aws" {
   region = var.region
 }
 
+terraform {
+  backend "s3" {
+    bucket         = "terraform-state-nitin-0717"   # your bucket name
+    key            = "infra/terraform.tfstate"
+    region         = "ap-south-1"
+    dynamodb_table = "terraform-lock"
+  }
+}
+
 resource "aws_instance" "app_server" {
   ami           = var.ami
   instance_type = var.instance_type
