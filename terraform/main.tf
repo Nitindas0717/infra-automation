@@ -15,7 +15,7 @@ resource "aws_instance" "app_server" {
 }
 
 resource "aws_security_group" "web_sg" {
-  name = "web-sg"
+  name = "web-sg_2.O"
 
   ingress {
     description = "SSH"
