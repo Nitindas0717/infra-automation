@@ -1,0 +1,54 @@
+name: Terraform + Ansible Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ap-south-1
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init
+      working-directory: terraform
+      run: terraform init
+
+    - name: Terraform Apply
+      working-directory: terraform
+      run: terraform apply -auto-approve -var="key_name=${{ secrets.KEY_NAME }}"
+
+    - name: Get EC2 IP
+      id: tf_output
+      working-directory: terraform
+      run: |
+        echo "APP_IP=$(terraform output -raw app_ip)" >> $GITHUB_ENV
+
+    - name: Setup SSH Key
+      run: |
+        echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
+        chmod 400 key.pem
+
+    - name: Install Ansible
+      run: sudo apt-get install -y ansible
+
+    - name: Run Ansible Playbook
+      run: |
+        echo "[web]" > inventory
+        echo "$APP_IP ansible_user=ubuntu ansible_ssh_private_key_file=key.pem" >> inventory
+
+        ansible-playbook -i inventory ansible/playbook.yml
